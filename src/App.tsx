@@ -48,10 +48,15 @@ const calculateShiftHours = (start: string, end: string) => {
   return Number((duration / 60).toFixed(2))
 }
 
+const normalizeMinutesToHours = (minutes: number) => {
+  return Number((minutes / 60).toFixed(2))
+}
+
 const calculateDailyHours = (row: AttendanceRow) => {
   const morningHours = row.morningShift ? calculateShiftHours(row.morningStart, row.morningEnd) : 0
   const afternoonHours = row.afternoonShift ? calculateShiftHours(row.afternoonStart, row.afternoonEnd) : 0
-  const overtimeHours = Number.parseFloat(row.overtime || '0') || 0
+  const overtimeMinutes = Number.parseFloat(row.overtime || '0') || 0
+  const overtimeHours = normalizeMinutesToHours(overtimeMinutes)
   return Number((morningHours + afternoonHours + overtimeHours).toFixed(2))
 }
 
@@ -80,11 +85,11 @@ const emptyForm = (): AttendanceRow => ({
   id: '',
   date: formatDateInput(new Date()),
   morningShift: true,
-  morningStart: '08:00',
-  morningEnd: '12:00',
+  morningStart: '07:45',
+  morningEnd: '11:45',
   afternoonShift: true,
-  afternoonStart: '13:00',
-  afternoonEnd: '17:30',
+  afternoonStart: '13:45',
+  afternoonEnd: '17:45',
   overtime: '0',
   totalHours: 0,
 })
