@@ -26,7 +26,15 @@ const STORAGE_KEYS = {
   auth: 'attendance-auth',
   data: 'attendance-data',
   baseSalary: 'attendance-base-salary',
+  theme: 'attendance-theme',
 }
+
+const THEME = {
+  light: 'light',
+  dark: 'dark',
+} as const
+
+type ThemeMode = (typeof THEME)[keyof typeof THEME]
 
 const DEFAULT_LOGIN: LoginForm = {
   username: 'admin',
@@ -97,6 +105,11 @@ const emptyForm = (): AttendanceRow => ({
 function App() {
   const [activeTab, setActiveTab] = useState<TabType>('attendance')
   const [selectedMonth, setSelectedMonth] = useState<string>(() => formatMonthInput(new Date()))
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return THEME.light
+    const saved = window.localStorage.getItem(STORAGE_KEYS.theme)
+    return saved === THEME.dark ? THEME.dark : THEME.light
+  })
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     const saved = window.localStorage.getItem(STORAGE_KEYS.auth)
@@ -142,6 +155,13 @@ function App() {
     }
   }, [baseSalary])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEYS.theme, theme)
+      document.body.dataset.theme = theme
+    }
+  }, [theme])
+
   const currentMonthEntries = useMemo(() => {
     return entries.filter((entry) => entry.date.startsWith(selectedMonth))
   }, [entries, selectedMonth])
@@ -184,22 +204,29 @@ function App() {
   }, [entries, selectedMonth])
 
   const exportToExcel = () => {
+    const monthRows = entries
+      .filter((entry) => entry.date.startsWith(selectedMonth))
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+
     const rows = [
       ['Ngày', 'Ca sáng', 'Bắt đầu sáng', 'Kết thúc sáng', 'Ca chiều', 'Bắt đầu chiều', 'Kết thúc chiều', 'Tăng ca', 'Tổng giờ'],
-      ...entries
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((entry) => [
-          entry.date,
-          entry.morningShift ? 'Có' : 'Không',
-          entry.morningShift ? entry.morningStart : '--:--',
-          entry.morningShift ? entry.morningEnd : '--:--',
-          entry.afternoonShift ? 'Có' : 'Không',
-          entry.afternoonShift ? entry.afternoonStart : '--:--',
-          entry.afternoonShift ? entry.afternoonEnd : '--:--',
-          entry.overtime || '0',
-          entry.totalHours.toFixed(2),
-        ]),
+      ...monthRows.map((entry) => [
+        entry.date,
+        entry.morningShift ? 'Có' : 'Không',
+        entry.morningShift ? entry.morningStart : '--:--',
+        entry.morningShift ? entry.morningEnd : '--:--',
+        entry.afternoonShift ? 'Có' : 'Không',
+        entry.afternoonShift ? entry.afternoonStart : '--:--',
+        entry.afternoonShift ? entry.afternoonEnd : '--:--',
+        entry.overtime || '0',
+        entry.totalHours.toFixed(2),
+      ]),
+      [],
+      ['Tổng giờ làm', '', '', '', '', '', '', '', monthRows.reduce((sum, entry) => sum + entry.totalHours, 0).toFixed(2)],
+      ['Lương theo giờ', '', '', '', '', '', '', '', `${(monthRows.reduce((sum, entry) => sum + entry.totalHours, 0) * baseSalary).toLocaleString('vi-VN')}đ`],
+      ['Thưởng 27 công', '', '', '', '', '', '', '', monthRows.filter((entry) => entry.totalHours > 0).length >= 27 ? '700.000đ' : '0đ'],
+      ['Tổng tiền lương tháng', '', '', '', '', '', '', '', `${(monthRows.reduce((sum, entry) => sum + entry.totalHours, 0) * baseSalary + (monthRows.filter((entry) => entry.totalHours > 0).length >= 27 ? 700000 : 0)).toLocaleString('vi-VN')}đ`],
     ]
 
     const csv = rows
@@ -211,13 +238,13 @@ function App() {
       .join('\n')
 
     const blob = new Blob(['\uFEFF' + csv], {
-      type: 'application/vnd.ms-excel;charset=utf-8;',
+      type: 'text/csv;charset=utf-8;',
     })
 
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `bang-cham-cong-${selectedMonth}.xls`
+    link.download = `bang-cham-cong-${selectedMonth}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -330,16 +357,25 @@ function App() {
           </div>
         </div>
       ) : (
-        <div className="app-root">
+        <div className={theme === THEME.dark ? 'app-root theme-dark' : 'app-root'}>
           <div className="app-shell">
             <header className="topbar">
               <div>
                 <p className="eyebrow">Quản lý nhân sự</p>
                 <h2>Chấm công cá nhân</h2>
               </div>
-              <button className="logout-button" type="button" onClick={() => setIsLoggedIn(false)}>
-                Đăng xuất
-              </button>
+              <div className="topbar-actions">
+                <button
+                  type="button"
+                  className="theme-toggle"
+                  onClick={() => setTheme((current) => (current === THEME.dark ? THEME.light : THEME.dark))}
+                >
+                  {theme === THEME.dark ? 'Light mode' : 'Dark mode'}
+                </button>
+                <button className="logout-button" type="button" onClick={() => setIsLoggedIn(false)}>
+                  Đăng xuất
+                </button>
+              </div>
             </header>
 
             <nav className="tab-nav" aria-label="Menu quản lý chấm công">
