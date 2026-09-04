@@ -286,24 +286,6 @@ function App() {
     setEntries((current) => current.filter((entry) => entry.date !== date))
   }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const saved = window.localStorage.getItem(STORAGE_KEYS.data)
-    if (!saved || saved === '[]') return
-
-    try {
-      const parsed = JSON.parse(saved) as AttendanceRow[]
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        window.localStorage.removeItem(STORAGE_KEYS.data)
-        setEntries([])
-      }
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEYS.data)
-      setEntries([])
-    }
-  }, [])
-
   return (
     <>
       {!isLoggedIn ? (
