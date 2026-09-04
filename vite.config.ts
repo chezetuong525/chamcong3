@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 // Cấu hình tối giản để tránh lỗi MIME type trên GitHub Pages
 export default defineConfig({
-  base: '/chamcong/',
+  base: '/chamcong3/',
   plugins: [react()],
   build: {
     outDir: 'dist',
