@@ -350,6 +350,36 @@ tr:hover td {
   gap: 16px;
 }
 
+.salary-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.salary-input-row span {
+  font-weight: 700;
+}
+
+.salary-input-row input {
+  width: 170px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  text-align: right;
+}
+
+.salary-input-row small {
+  font-weight: 700;
+  color: #475569;
+}
+
 .salary-row {
   display: flex;
   align-items: center;
@@ -505,6 +535,15 @@ tr:hover td {
 
   table {
     min-width: 740px;
+  }
+
+  .salary-input-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .salary-input-row input {
+    width: 100%;
   }
 
   .salary-row {

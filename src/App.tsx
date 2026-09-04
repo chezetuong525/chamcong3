@@ -25,12 +25,15 @@ type LoginForm = {
 const STORAGE_KEYS = {
   auth: 'attendance-auth',
   data: 'attendance-data',
+  baseSalary: 'attendance-base-salary',
 }
 
 const DEFAULT_LOGIN: LoginForm = {
   username: 'admin',
   password: '123456',
 }
+
+const DEFAULT_BASE_SALARY = 35000
 
 const timeToMinutes = (value: string) => {
   if (!value) return 0
@@ -98,6 +101,11 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [dateError, setDateError] = useState('')
   const [form, setForm] = useState<AttendanceRow>(emptyForm())
+  const [baseSalary, setBaseSalary] = useState<number>(() => {
+    if (typeof window === 'undefined') return DEFAULT_BASE_SALARY
+    const saved = Number(window.localStorage.getItem(STORAGE_KEYS.baseSalary))
+    return Number.isFinite(saved) && saved > 0 ? saved : DEFAULT_BASE_SALARY
+  })
   const [entries, setEntries] = useState<AttendanceRow[]>(() => {
     if (typeof window === 'undefined') return []
     const saved = window.localStorage.getItem(STORAGE_KEYS.data)
@@ -123,6 +131,12 @@ function App() {
     }
   }, [isLoggedIn])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEYS.baseSalary, String(baseSalary))
+    }
+  }, [baseSalary])
+
   const currentMonthEntries = useMemo(() => {
     return entries.filter((entry) => entry.date.startsWith(selectedMonth))
   }, [entries, selectedMonth])
@@ -130,7 +144,7 @@ function App() {
   const monthSummary = useMemo(() => {
     const workedDays = currentMonthEntries.filter((entry) => entry.totalHours > 0).length
     const totalHours = currentMonthEntries.reduce((sum, entry) => sum + entry.totalHours, 0)
-    const salary = totalHours * 35000 + (workedDays >= 27 ? 700000 : 0)
+    const salary = totalHours * baseSalary + (workedDays >= 27 ? 700000 : 0)
 
     return {
       totalDays: currentMonthEntries.length,
@@ -138,7 +152,7 @@ function App() {
       totalHours,
       salary,
     }
-  }, [currentMonthEntries])
+  }, [baseSalary, currentMonthEntries])
 
   const calendarDays = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
@@ -271,6 +285,24 @@ function App() {
   const handleDelete = (date: string) => {
     setEntries((current) => current.filter((entry) => entry.date !== date))
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const saved = window.localStorage.getItem(STORAGE_KEYS.data)
+    if (!saved || saved === '[]') return
+
+    try {
+      const parsed = JSON.parse(saved) as AttendanceRow[]
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        window.localStorage.removeItem(STORAGE_KEYS.data)
+        setEntries([])
+      }
+    } catch {
+      window.localStorage.removeItem(STORAGE_KEYS.data)
+      setEntries([])
+    }
+  }, [])
 
   return (
     <>
@@ -621,9 +653,24 @@ function App() {
                 </div>
 
                 <div className="salary-box">
+                  <label className="salary-input-row">
+                    <span>Lương cơ bản của bạn</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={baseSalary}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value)
+                        setBaseSalary(Number.isFinite(nextValue) && nextValue > 0 ? nextValue : 0)
+                      }}
+                    />
+                    <small>đ / giờ</small>
+                  </label>
+
                   <div className="salary-row">
                     <span>Lương cơ bản</span>
-                    <strong>35.000đ / giờ</strong>
+                    <strong>{baseSalary.toLocaleString('vi-VN')}đ / giờ</strong>
                   </div>
                   <div className="salary-row">
                     <span>Tháng đang tính</span>
@@ -635,7 +682,7 @@ function App() {
                   </div>
                   <div className="salary-row">
                     <span>Tiền lương theo giờ</span>
-                    <strong>{(monthSummary.totalHours * 35000).toLocaleString('vi-VN')}đ</strong>
+                    <strong>{(monthSummary.totalHours * baseSalary).toLocaleString('vi-VN')}đ</strong>
                   </div>
                   <div className="salary-row highlight">
                     <span>Thưởng trên 27 công</span>
